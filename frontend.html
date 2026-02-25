@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>fshare</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500&family=IBM+Plex+Sans:wght@300;400&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:       #0a0a0a;
+    --surface:  #111111;
+    --border:   #222222;
+    --accent:   #e8ff47;
+    --dim:      #444444;
+    --text:     #d4d4d4;
+    --danger:   #ff4747;
+  }
+
+  html, body {
+    height: 100%;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+    line-height: 1.6;
+  }
+
+  /* scanline overlay */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0,0,0,.12) 2px,
+      rgba(0,0,0,.12) 4px
+    );
+    pointer-events: none;
+    z-index: 9999;
+  }
+
+  .shell {
+    min-height: 100vh;
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 0 24px;
+  }
+
+  /* ── header ── */
+  header {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    padding: 32px 0 24px;
+    border-bottom: 1px solid var(--border);
+  }
+  .logo {
+    font-size: 22px;
+    font-weight: 500;
+    color: var(--accent);
+    letter-spacing: -1px;
+  }
+  .logo span { color: var(--dim); }
+  header small {
+    font-size: 11px;
+    color: var(--dim);
+    font-family: 'IBM Plex Sans', sans-serif;
+  }
+
+  /* ── main ── */
+  main { padding: 40px 0; display: flex; flex-direction: column; gap: 40px; }
+
+  /* ── drop zone ── */
+  .drop {
+    border: 1px dashed var(--border);
+    padding: 48px 32px;
+    text-align: center;
+    cursor: pointer;
+    position: relative;
+    transition: border-color .15s, background .15s;
+  }
+  .drop:hover, .drop.over {
+    border-color: var(--accent);
+    background: rgba(232,255,71,.03);
+  }
+  .drop input {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: pointer;
+    width: 100%;
+    height: 100%;
+  }
+  .drop-icon {
+    font-size: 28px;
+    margin-bottom: 12px;
+    opacity: .4;
+  }
+  .drop p { color: var(--dim); }
+  .drop p strong { color: var(--text); }
+
+  /* ── progress ── */
+  .progress-wrap {
+    display: none;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .progress-wrap.visible { display: flex; }
+  .progress-label {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+    color: var(--dim);
+  }
+  .progress-bar {
+    height: 2px;
+    background: var(--border);
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    background: var(--accent);
+    width: 0%;
+    transition: width .1s linear;
+  }
+
+  /* ── result box ── */
+  .result {
+    display: none;
+    flex-direction: column;
+    gap: 16px;
+    border: 1px solid var(--border);
+    padding: 20px 24px;
+  }
+  .result.visible { display: flex; }
+  .result-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .tag {
+    font-size: 10px;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--bg);
+    background: var(--accent);
+    padding: 2px 6px;
+    flex-shrink: 0;
+  }
+  .result-id {
+    color: var(--text);
+    word-break: break-all;
+    flex: 1;
+  }
+  .copy-btn {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--dim);
+    font-family: inherit;
+    font-size: 11px;
+    padding: 4px 10px;
+    cursor: pointer;
+    transition: color .1s, border-color .1s;
+    flex-shrink: 0;
+  }
+  .copy-btn:hover { color: var(--accent); border-color: var(--accent); }
+
+  /* ── lookup ── */
+  .lookup { display: flex; flex-direction: column; gap: 12px; }
+  .lookup label {
+    font-size: 11px;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--dim);
+  }
+  .input-row { display: flex; gap: 0; }
+  .input-row input {
+    flex: 1;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-right: none;
+    color: var(--text);
+    font-family: inherit;
+    font-size: 13px;
+    padding: 10px 14px;
+    outline: none;
+    transition: border-color .15s;
+  }
+  .input-row input:focus { border-color: var(--accent); }
+  .input-row input::placeholder { color: var(--dim); }
+  .input-row button {
+    background: var(--accent);
+    border: 1px solid var(--accent);
+    color: var(--bg);
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 500;
+    padding: 10px 20px;
+    cursor: pointer;
+    transition: opacity .1s;
+    white-space: nowrap;
+  }
+  .input-row button:hover { opacity: .85; }
+
+  /* ── preview ── */
+  .preview {
+    display: none;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .preview.visible { display: flex; }
+  .preview-url {
+    font-size: 11px;
+    color: var(--dim);
+    word-break: break-all;
+    padding: 10px 14px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+  }
+  .preview-url a { color: var(--accent); text-decoration: none; }
+  .preview-url a:hover { text-decoration: underline; }
+  .preview-media {
+    border: 1px solid var(--border);
+    overflow: hidden;
+    background: var(--surface);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 60px;
+  }
+  .preview-media img {
+    max-width: 100%;
+    max-height: 480px;
+    display: block;
+  }
+  .preview-media video {
+    max-width: 100%;
+    max-height: 480px;
+    display: block;
+  }
+  .preview-media .no-preview {
+    padding: 32px;
+    color: var(--dim);
+    font-size: 11px;
+    text-align: center;
+  }
+  .preview-media .no-preview span { display: block; font-size: 28px; margin-bottom: 8px; opacity: .3; }
+
+  /* ── error ── */
+  .error-msg {
+    display: none;
+    font-size: 11px;
+    color: var(--danger);
+    padding: 8px 12px;
+    border: 1px solid rgba(255,71,71,.25);
+    background: rgba(255,71,71,.04);
+  }
+  .error-msg.visible { display: block; }
+
+  /* ── footer ── */
+  footer {
+    padding: 16px 0 24px;
+    border-top: 1px solid var(--border);
+    font-size: 11px;
+    color: var(--dim);
+    display: flex;
+    justify-content: space-between;
+  }
+
+  /* ── section header ── */
+  .section-hdr {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 4px;
+  }
+  .section-hdr h2 {
+    font-size: 11px;
+    font-weight: 400;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--dim);
+  }
+  .section-hdr::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  /* ── animations ── */
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .result.visible, .preview.visible {
+    animation: fadeIn .2s ease;
+  }
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <header>
+    <div class="logo">f<span>/</span>share</div>
+    <small>object storage frontend</small>
+  </header>
+
+  <main>
+
+    <!-- ── upload section ── -->
+    <section>
+      <div class="section-hdr"><h2>upload</h2></div>
+
+      <div class="drop" id="drop">
+        <input type="file" id="fileInput">
+        <div class="drop-icon">⬆</div>
+        <p><strong>drop file here</strong> or click to browse</p>
+      </div>
+
+      <div class="progress-wrap" id="progressWrap">
+        <div class="progress-label">
+          <span id="progressName">uploading...</span>
+          <span id="progressPct">0%</span>
+        </div>
+        <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+      </div>
+
+      <div class="error-msg" id="uploadError"></div>
+
+      <div class="result" id="uploadResult">
+        <div class="result-row">
+          <span class="tag">id</span>
+          <span class="result-id" id="resultId"></span>
+          <button class="copy-btn" id="copyIdBtn">copy</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── lookup section ── -->
+    <section>
+      <div class="section-hdr"><h2>get link</h2></div>
+
+      <div class="lookup">
+        <label for="uuidInput">file uuid</label>
+        <div class="input-row">
+          <input type="text" id="uuidInput" placeholder="550e8400-e29b-41d4-a716-446655440000">
+          <button id="getUrlBtn">fetch →</button>
+        </div>
+      </div>
+
+      <div class="error-msg" id="lookupError"></div>
+
+      <div class="preview" id="preview">
+        <div class="preview-url">
+          <a id="previewLink" href="#" target="_blank" rel="noopener"></a>
+        </div>
+        <div class="preview-media" id="previewMedia"></div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer>
+    <span>POST /api/v1/files/ · GET /api/v1/files/:id/url</span>
+    <span id="statusLine">idle</span>
+  </footer>
+
+</div>
+
+<script>
+  const API = '';  // пусто = тот же origin; или 'http://localhost:8080'
+
+  // ── helpers ──────────────────────────────────────────────────────────────
+
+  function setStatus(msg) {
+    document.getElementById('statusLine').textContent = msg;
+  }
+
+  function showError(id, msg) {
+    const el = document.getElementById(id);
+    el.textContent = msg;
+    el.classList.add('visible');
+  }
+
+  function hideError(id) {
+    const el = document.getElementById(id);
+    el.textContent = '';
+    el.classList.remove('visible');
+  }
+
+  async function guessMediaType(url) {
+    try {
+      const res = await fetch(url, { method: 'HEAD' });
+      const ct = res.headers.get('Content-Type') || '';
+      if (ct.startsWith('image/')) return 'image';
+      if (ct.startsWith('video/')) return 'video';
+      return 'other';
+    } catch {
+      return 'other';
+    }
+  }
+
+  // ── upload ───────────────────────────────────────────────────────────────
+
+  const drop      = document.getElementById('drop');
+  const fileInput = document.getElementById('fileInput');
+
+  drop.addEventListener('dragover',  e => { e.preventDefault(); drop.classList.add('over'); });
+  drop.addEventListener('dragleave', () => drop.classList.remove('over'));
+  drop.addEventListener('drop', e => {
+    e.preventDefault();
+    drop.classList.remove('over');
+    const file = e.dataTransfer.files[0];
+    if (file) uploadFile(file);
+  });
+
+  fileInput.addEventListener('change', () => {
+    if (fileInput.files[0]) uploadFile(fileInput.files[0]);
+  });
+
+  function uploadFile(file) {
+    hideError('uploadError');
+    document.getElementById('uploadResult').classList.remove('visible');
+
+    const progressWrap = document.getElementById('progressWrap');
+    const progressFill = document.getElementById('progressFill');
+    const progressPct  = document.getElementById('progressPct');
+    const progressName = document.getElementById('progressName');
+
+    progressWrap.classList.add('visible');
+    progressName.textContent = file.name;
+    progressFill.style.width = '0%';
+    progressPct.textContent = '0%';
+
+    setStatus('uploading ' + file.name + '…');
+
+    const fd = new FormData();
+    fd.append('file', file);
+
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', API + '/api/v1/files/');
+
+    xhr.upload.addEventListener('progress', e => {
+      if (!e.lengthComputable) return;
+      const pct = Math.round(e.loaded / e.total * 100);
+      progressFill.style.width = pct + '%';
+      progressPct.textContent  = pct + '%';
+    });
+
+    xhr.addEventListener('load', () => {
+      progressWrap.classList.remove('visible');
+      fileInput.value = '';
+
+      if (xhr.status === 201) {
+        const { id } = JSON.parse(xhr.responseText);
+        document.getElementById('resultId').textContent = id;
+        document.getElementById('uploadResult').classList.add('visible');
+        // auto-fill uuid input
+        document.getElementById('uuidInput').value = id;
+        setStatus('uploaded · ' + id.slice(0, 8) + '…');
+      } else {
+        const msg = tryParseError(xhr.responseText) || ('HTTP ' + xhr.status);
+        showError('uploadError', '✗ ' + msg);
+        setStatus('upload failed');
+      }
+    });
+
+    xhr.addEventListener('error', () => {
+      progressWrap.classList.remove('visible');
+      showError('uploadError', '✗ network error');
+      setStatus('error');
+    });
+
+    xhr.send(fd);
+  }
+
+  document.getElementById('copyIdBtn').addEventListener('click', () => {
+    const id = document.getElementById('resultId').textContent;
+    navigator.clipboard.writeText(id).then(() => {
+      const btn = document.getElementById('copyIdBtn');
+      btn.textContent = 'copied!';
+      setTimeout(() => btn.textContent = 'copy', 1500);
+    });
+  });
+
+  // ── get url ──────────────────────────────────────────────────────────────
+
+  document.getElementById('getUrlBtn').addEventListener('click', fetchUrl);
+  document.getElementById('uuidInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter') fetchUrl();
+  });
+
+  async function fetchUrl() {
+    hideError('lookupError');
+    document.getElementById('preview').classList.remove('visible');
+
+    const id = document.getElementById('uuidInput').value.trim();
+    if (!id) return;
+
+    setStatus('fetching url…');
+
+    try {
+      const res = await fetch(API + '/api/v1/files/' + encodeURIComponent(id) + '/url');
+      const body = await res.json();
+
+      if (!res.ok) {
+        showError('lookupError', '✗ ' + (body.error || 'HTTP ' + res.status));
+        setStatus('error');
+        return;
+      }
+
+      const url = body.url;
+      const link = document.getElementById('previewLink');
+      link.href = url;
+      link.textContent = url.length > 80 ? url.slice(0, 80) + '…' : url;
+
+      await renderPreview(url);
+      document.getElementById('preview').classList.add('visible');
+      setStatus('ok · ' + id.slice(0, 8) + '…');
+
+    } catch (err) {
+      showError('lookupError', '✗ network error');
+      setStatus('error');
+    }
+  }
+
+  async function renderPreview(url) {
+    const container = document.getElementById('previewMedia');
+    container.innerHTML = '<div class="no-preview"><span>⋯</span>detecting type...</div>';
+
+    const type = await guessMediaType(url);
+
+    container.innerHTML = '';
+
+    if (type === 'image') {
+      const img = document.createElement('img');
+      img.src = url;
+      img.alt = 'preview';
+      img.onerror = () => renderFallback(container, 'failed to load image');
+      container.appendChild(img);
+    } else if (type === 'video') {
+      const video = document.createElement('video');
+      video.src = url;
+      video.controls = true;
+      video.onerror = () => renderFallback(container, 'failed to load video');
+      container.appendChild(video);
+    } else {
+      renderFallback(container, 'no preview available — open link to download');
+    }
+  }
+
+  function renderFallback(container, msg) {
+    container.innerHTML = `<div class="no-preview"><span>◫</span>${msg}</div>`;
+  }
+
+  function tryParseError(text) {
+    try { return JSON.parse(text).error; } catch { return null; }
+  }
+</script>
+</body>
+</html>

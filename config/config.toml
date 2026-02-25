@@ -1,5 +1,5 @@
 [postgres]
-host     = "localhost"
+host     = "postgres"
 port     = 5432
 user     = "postgres"
 password = "postgres"
@@ -9,7 +9,7 @@ max_conns = 10
 min_conns = 2
 
 [http]
-host               = "localhost"
+host               = "0.0.0.0"
 port               = 8080
 allow_origins      = ["*"]
 allow_methods      = ["*"]
@@ -22,9 +22,12 @@ level = "debug"
 json  = false
 
 [s3]
-endpoint         = "localhost:9000"
-access_key_id    = "rustfsadmin"
+endpoint          = "rustfs:9000"
+access_key_id     = "rustfsadmin"
 secret_access_key = "rustfsadmin"
-bucket           = "fshare"
-use_ssl          = false
-region           = "us-east-1"
+bucket            = "fshare"
+use_ssl           = false
+region            = "us-east-1"
+
+[app]
+public_base = "http://localhost/s3"

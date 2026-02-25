@@ -43,11 +43,16 @@ type S3Config struct {
 	Region          string `toml:"region"`
 }
 
+type AppConfig struct {
+	PublicBase string `toml:"public_base"`
+}
+
 type Config struct {
 	Postgres PostgresConfig `toml:"postgres"`
 	HTTP     HTTPConfig     `toml:"http"`
 	Logger   LoggerConfig   `toml:"logger"`
 	S3       S3Config       `toml:"s3"`
+	App      AppConfig      `toml:"app"`
 }
 
 func NewConfig(filename string) Config {

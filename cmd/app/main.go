@@ -32,18 +32,17 @@ func main() {
 	pg, err := postgres.NewPostgres(cfg.Postgres)
 	if err != nil {
 		slog.Error("Error while connecting pg", slog.String("error", err.Error()))
+		return
 	}
 
-	fileRepo := file.NewFileRepository(pg.Pool)
 	s3, err := rustfs.NewClient(cfg.S3)
-
-	service := fileService.New(fileRepo, s3)
-
 	if err != nil {
-		panic(err.Error())
+		slog.Error("Error connecting S3", slog.String("error", err.Error()))
+		return
 	}
+
+	service := fileService.New(file.NewFileRepository(pg.Pool), s3, cfg.App.PublicBase)
 
 	srv := server.NewServer(ctx, cfg, service)
-
 	srv.Run()
 }
