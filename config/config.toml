@@ -20,3 +20,11 @@ max_age_secs       = 3600
 [logger]
 level = "debug"
 json  = false
+
+[s3]
+endpoint         = "localhost:9000"
+access_key_id    = "rustfsadmin"
+secret_access_key = "rustfsadmin"
+bucket           = "fshare"
+use_ssl          = false
+region           = "us-east-1"

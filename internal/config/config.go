@@ -34,10 +34,20 @@ type LoggerConfig struct {
 	JSON  bool   `toml:"json"`
 }
 
+type S3Config struct {
+	Endpoint        string `toml:"endpoint"`
+	AccessKeyID     string `toml:"access_key_id"`
+	SecretAccessKey string `toml:"secret_access_key"`
+	Bucket          string `toml:"bucket"`
+	UseSSL          bool   `toml:"use_ssl"`
+	Region          string `toml:"region"`
+}
+
 type Config struct {
 	Postgres PostgresConfig `toml:"postgres"`
 	HTTP     HTTPConfig     `toml:"http"`
 	Logger   LoggerConfig   `toml:"logger"`
+	S3       S3Config       `toml:"s3"`
 }
 
 func NewConfig(filename string) Config {

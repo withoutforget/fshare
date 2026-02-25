@@ -9,9 +9,11 @@ import (
 
 	"github.com/withoutforget/fshare/internal/config"
 	"github.com/withoutforget/fshare/internal/infra/postgres"
+	"github.com/withoutforget/fshare/internal/infra/rustfs"
 	"github.com/withoutforget/fshare/internal/logger"
 	"github.com/withoutforget/fshare/internal/repository/file"
 	"github.com/withoutforget/fshare/internal/server"
+	fileService "github.com/withoutforget/fshare/internal/service/file"
 )
 
 func main() {
@@ -32,9 +34,16 @@ func main() {
 		slog.Error("Error while connecting pg", slog.String("error", err.Error()))
 	}
 
-	_ = file.NewFileRepository(pg.Pool)
+	fileRepo := file.NewFileRepository(pg.Pool)
+	s3, err := rustfs.NewClient(cfg.S3)
 
-	srv := server.NewServer(ctx, cfg)
+	service := fileService.New(fileRepo, s3)
+
+	if err != nil {
+		panic(err.Error())
+	}
+
+	srv := server.NewServer(ctx, cfg, service)
 
 	srv.Run()
 }

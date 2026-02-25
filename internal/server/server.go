@@ -9,6 +9,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/withoutforget/fshare/internal/config"
 	"github.com/withoutforget/fshare/internal/server/handler"
+	"github.com/withoutforget/fshare/internal/service/file"
 )
 
 type Server struct {
@@ -17,7 +18,7 @@ type Server struct {
 	e   *gin.Engine
 }
 
-func NewServer(ctx context.Context, cfg config.Config) Server {
+func NewServer(ctx context.Context, cfg config.Config, fileSerice *file.FileService) Server {
 	var s Server
 	s.ctx = ctx
 	s.cfg = cfg
@@ -25,7 +26,7 @@ func NewServer(ctx context.Context, cfg config.Config) Server {
 	s.e.Use(gin.Recovery())
 	s.e.Use(LoggerMiddleware())
 	s.e.RedirectTrailingSlash = false
-	handler.Setup(s.e)
+	handler.Setup(s.e, fileSerice)
 
 	return s
 }
