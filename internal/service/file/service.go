@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"net/url"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -44,21 +43,21 @@ type DownloadResult struct {
 
 func (s *FileService) Upload(ctx context.Context, in UploadInput) (uuid.UUID, error) {
 	fileID := uuid.New()
-	ext := filepath.Ext(in.OriginalName)
-	s3Key := fmt.Sprintf("%s%s", fileID.String(), ext)
+	//ext := filepath.Ext(in.OriginalName)
+	s3Key := fileID.String()
 
 	_, err := s.s3.Upload(ctx, s3Key, in.Content, in.Size, in.ContentType)
 	if err != nil {
 		return uuid.Nil, fmt.Errorf("file service: upload to s3: %w", err)
 	}
 
-	id, err := s.repo.AddFile(ctx, in.OriginalName, s3Key, time.Now().UTC(), in.UploadedBy)
+	_, err = s.repo.AddFile(ctx, in.OriginalName, s3Key, time.Now().UTC(), in.UploadedBy)
 	if err != nil {
 		_ = s.s3.Delete(ctx, s3Key)
 		return uuid.Nil, fmt.Errorf("file service: save metadata: %w", err)
 	}
 
-	return id, nil
+	return fileID, nil
 }
 
 // Download стримит файл из S3 напрямую через апишку.
@@ -88,7 +87,7 @@ func (s *FileService) Download(ctx context.Context, fileID uuid.UUID) (DownloadR
 
 // GetFileURL возвращает простой публичный URL без presigned параметров.
 func (s *FileService) GetFileURL(ctx context.Context, fileID uuid.UUID) (*url.URL, error) {
-	u, err := url.Parse(fmt.Sprintf("%s/api/v1/files/%s", s.publicBase, fileID.String()))
+	u, err := url.Parse(fmt.Sprintf("%s/fshare/%s", s.publicBase, fileID.String()))
 	if err != nil {
 		return nil, fmt.Errorf("file service: build url: %w", err)
 	}
